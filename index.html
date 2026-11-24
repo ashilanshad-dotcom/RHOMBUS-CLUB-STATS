@@ -81,8 +81,9 @@ body {
 .stat-number {
   margin-top: 10px;
   color: #ffffff;
-  font-size: 34px;
+  font-size: clamp(18px, 5vw, 34px);
   font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 button {
@@ -200,6 +201,7 @@ button:disabled {
 
 <div class="container">
 
+  <!-- HEADER -->
   <header class="header">
     <h1>RHOMBUS CLUB</h1>
     <p>THINK • PLAY • SHINE</p>
@@ -210,6 +212,7 @@ button:disabled {
     POWERED BY CHESS.COM PUBLIC DATA API
   </div>
 
+  <!-- STATISTICS -->
   <div class="stats">
 
     <div class="stat-card">
@@ -224,14 +227,16 @@ button:disabled {
 
   </div>
 
+  <!-- REFRESH BUTTON -->
   <button id="refreshButton" onclick="refreshStats()">
     ↻ REFRESH DATA
   </button>
 
   <div class="status" id="status" role="status" aria-live="polite">
-    Loading club statistics...
+    Loading saved statistics...
   </div>
 
+  <!-- NEWEST MEMBERS -->
   <section class="members">
 
     <h2>♦ NEWEST MEMBERS</h2>
@@ -242,25 +247,40 @@ button:disabled {
 
   </section>
 
+  <!-- INFORMATION -->
   <div class="note">
-    Information is retrieved from Chess.com's public API.
-    API responses can be cached for up to 12 hours.
-    Refreshing the page does not guarantee that Chess.com
-    has generated a newer response.
+    Statistics are loaded from the automatically generated
+    stats.json file in the RHOMBUS CLUB GitHub repository.
+
+    GitHub Actions is configured to update this information
+    twice daily.
+
+    The Refresh Data button reloads the saved information.
+    It does not directly request new information from Chess.com.
+
+    Chess.com may cache its API responses for up to 12 hours.
   </div>
 
+  <!-- LINKS -->
   <div class="links">
+
     <a href="https://www.chess.com/club/rhombus-club"
-       target="_blank" rel="noopener noreferrer">
+       target="_blank"
+       rel="noopener noreferrer">
        VISIT RHOMBUS CLUB ↗
     </a>
+
     |
-    <a href="https://api.chess.com/pub/club/rhombus-club"
-       target="_blank" rel="noopener noreferrer">
-       CLUB API ↗
+
+    <a href="https://github.com/ashilanshad-dotcom/RHOMBUS-CLUB-STATS/blob/main/stats.json"
+       target="_blank"
+       rel="noopener noreferrer">
+       VIEW RAW STATISTICS ↗
     </a>
+
   </div>
 
+  <!-- FOOTER -->
   <footer class="footer">
     RHOMBUS CLUB<br><br>
     STRATEGY • HONOR • EXCELLENCE
@@ -268,165 +288,9 @@ button:disabled {
 
 </div>
 
+<!-- STATS.JSON CONNECTION -->
 <script>
 "use strict";
-
-const CLUB_PROFILE =
-  "https://api.chess.com/pub/club/rhombus-club";
-
-const CLUB_MEMBERS =
-  "https://api.chess.com/pub/club/rhombus-club/members";
-
-let callbackCounter = 0;
-
-function jsonpRequest(url) {
-
-  return new Promise((resolve, reject) => {
-
-    callbackCounter++;
-
-    const callbackName =
-      "rhombusCallback" + callbackCounter;
-
-    const script = document.createElement("script");
-
-    let completed = false;
-
-    const timeout = setTimeout(() => {
-      finish(new Error("The API request timed out."));
-    }, 15000);
-
-    function finish(error, data) {
-
-      if (completed) return;
-
-      completed = true;
-
-      clearTimeout(timeout);
-      script.remove();
-
-      try {
-        delete window[callbackName];
-      } catch (e) {
-        window[callbackName] = undefined;
-      }
-
-      if (error) {
-        reject(error);
-      } else {
-        resolve(data);
-      }
-    }
-
-    window[callbackName] = function(data) {
-      finish(null, data);
-    };
-
-    script.onerror = function() {
-      finish(new Error("Could not connect to Chess.com."));
-    };
-
-    const separator = url.includes("?") ? "&" : "?";
-
-    script.src =
-      url + separator +
-      "callback=" + encodeURIComponent(callbackName);
-
-    document.head.appendChild(script);
-
-  });
-}
-
-function displayNewestMembers(data) {
-
-  const categories = [
-    "weekly",
-    "monthly",
-    "all_time"
-  ];
-
-  const uniqueMembers = new Map();
-
-  categories.forEach(category => {
-
-    const list = Array.isArray(data[category])
-      ? data[category]
-      : [];
-
-    list.forEach(member => {
-
-      if (!member || !member.username) return;
-
-      const key = member.username.toLowerCase();
-
-      if (!uniqueMembers.has(key)) {
-        uniqueMembers.set(key, member);
-      }
-
-    });
-
-  });
-
-  const records = Array.from(uniqueMembers.values());
-
-  records.sort((a, b) =>
-    Number(b.joined || 0) - Number(a.joined || 0)
-  );
-
-  document.getElementById("memberRecords").textContent =
-    records.length.toLocaleString();
-
-  const output =
-    document.getElementById("newestMembers");
-
-  output.replaceChildren();
-
-  if (records.length === 0) {
-    output.textContent =
-      "No member records were returned.";
-    return;
-  }
-
-  records.slice(0, 10).forEach((member, index) => {
-
-    const row = document.createElement("div");
-    row.className = "member";
-
-    const name = document.createElement("a");
-
-    name.textContent =
-      String(index + 1).padStart(2, "0") +
-      ". @" + member.username;
-
-    name.href =
-      "https://www.chess.com/member/" +
-      encodeURIComponent(member.username);
-
-    name.target = "_blank";
-    name.rel = "noopener noreferrer";
-
-    const date = document.createElement("span");
-    date.className = "member-date";
-
-    const timestamp = Number(member.joined);
-
-    date.textContent = timestamp
-      ? new Date(timestamp * 1000).toLocaleDateString(
-          undefined,
-          {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-          }
-        )
-      : "Date unavailable";
-
-    row.append(name, date);
-    output.appendChild(row);
-
-  });
-
-}
 
 async function refreshStats() {
 
@@ -439,81 +303,214 @@ async function refreshStats() {
   const total =
     document.getElementById("totalMembers");
 
+  const records =
+    document.getElementById("memberRecords");
+
+  const newest =
+    document.getElementById("newestMembers");
+
   button.disabled = true;
   button.textContent = "LOADING...";
 
   status.textContent =
-    "Connecting to Chess.com...";
-
-  let profileLoaded = false;
-  let membersLoaded = false;
+    "Loading saved RHOMBUS CLUB statistics...";
 
   try {
 
-    const profile = await jsonpRequest(CLUB_PROFILE);
+    // Locate the stats.json file alongside this webpage.
+    const statsURL = new URL(
+      "./stats.json",
+      window.location.href
+    );
 
-    if (typeof profile.members_count === "number") {
+    // Add a unique query to request the latest published file.
+    statsURL.searchParams.set(
+      "refresh",
+      Date.now().toString()
+    );
 
-      total.textContent =
-        profile.members_count.toLocaleString();
+    const response = await fetch(
+      statsURL.toString(),
+      { cache: "no-store" }
+    );
 
-      profileLoaded = true;
+    if (!response.ok) {
+      throw new Error(
+        "Could not retrieve stats.json. HTTP " +
+        response.status
+      );
+    }
+
+    const data = await response.json();
+
+    if (
+      !data ||
+      typeof data !== "object"
+    ) {
+      throw new Error(
+        "The statistics file has an invalid format."
+      );
+    }
+
+    // DISPLAY TOTAL MEMBERS
+    total.textContent =
+      typeof data.total_members === "number"
+        ? data.total_members.toLocaleString()
+        : "Unavailable";
+
+    // DISPLAY MEMBER RECORDS
+    if (
+      data.members_available === true &&
+      typeof data.member_records === "number"
+    ) {
+
+      records.textContent =
+        data.member_records.toLocaleString();
 
     } else {
 
-      total.textContent = "Unavailable";
+      records.textContent = "Unavailable";
+
+    }
+
+    // DISPLAY NEWEST MEMBERS
+    newest.replaceChildren();
+
+    const members =
+      Array.isArray(data.newest_members)
+        ? data.newest_members
+        : [];
+
+    if (
+      data.members_available === true &&
+      members.length > 0
+    ) {
+
+      members.slice(0, 10).forEach(
+        (member, index) => {
+
+          const row =
+            document.createElement("div");
+
+          row.className = "member";
+
+          const name =
+            document.createElement("a");
+
+          name.textContent =
+            String(index + 1).padStart(2, "0") +
+            ". @" + member.username;
+
+          name.href =
+            "https://www.chess.com/member/" +
+            encodeURIComponent(member.username);
+
+          name.target = "_blank";
+          name.rel = "noopener noreferrer";
+
+          const date =
+            document.createElement("span");
+
+          date.className = "member-date";
+
+          let joinedDate = null;
+
+          if (member.joined_date) {
+
+            joinedDate =
+              new Date(member.joined_date);
+
+          } else if (Number(member.joined) > 0) {
+
+            joinedDate =
+              new Date(Number(member.joined) * 1000);
+
+          }
+
+          date.textContent =
+            joinedDate &&
+            !Number.isNaN(joinedDate.getTime())
+              ? joinedDate.toLocaleDateString(
+                  undefined,
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric"
+                  }
+                )
+              : "Date unavailable";
+
+          row.append(name, date);
+          newest.appendChild(row);
+
+        }
+      );
+
+    } else {
+
+      newest.textContent =
+        "Newest-member information is currently unavailable. " +
+        "Chess.com did not provide member records in the latest update.";
+
+    }
+
+    // DISPLAY LAST AUTOMATED UPDATE
+    let updatedText =
+      "Update time unavailable";
+
+    if (data.updated_at) {
+
+      const updatedDate =
+        new Date(data.updated_at);
+
+      if (!Number.isNaN(updatedDate.getTime())) {
+
+        updatedText =
+          "Last automated update: " +
+          updatedDate.toLocaleString();
+
+      }
+
+    }
+
+    if (data.members_available === true) {
+
+      status.textContent =
+        "Statistics loaded successfully. " +
+        updatedText;
+
+    } else {
+
+      status.textContent =
+        "Club statistics loaded successfully. " +
+        updatedText +
+        " Member-list information is unavailable.";
 
     }
 
   } catch (error) {
 
-    total.textContent = "Unavailable";
+    total.textContent = "—";
+    records.textContent = "—";
+
+    newest.textContent =
+      "Statistics could not be retrieved. Please try again.";
 
     status.textContent =
-      "Club information could not be loaded. Checking member data...";
+      "Error: " + error.message;
+
+  } finally {
+
+    button.disabled = false;
+    button.textContent = "↻ REFRESH DATA";
 
   }
-
-  try {
-
-    const memberData = await jsonpRequest(CLUB_MEMBERS);
-
-    displayNewestMembers(memberData || {});
-
-    membersLoaded = true;
-
-  } catch (error) {
-
-    document.getElementById("newestMembers").textContent =
-      "Member data could not be loaded. Please try again later.";
-
-  }
-
-  if (profileLoaded && membersLoaded) {
-
-    status.textContent =
-      "Successfully checked at " +
-      new Date().toLocaleTimeString() +
-      ". Chess.com may return cached data.";
-
-  } else if (profileLoaded || membersLoaded) {
-
-    status.textContent =
-      "Partially loaded. Some API information was unavailable.";
-
-  } else {
-
-    status.textContent =
-      "Unable to retrieve statistics. Check your connection and try again.";
-
-  }
-
-  button.disabled = false;
-  button.textContent = "↻ REFRESH DATA";
 
 }
 
+// LOAD SAVED DATA WHEN THE PAGE OPENS
 refreshStats();
+
 </script>
 
 </body>
