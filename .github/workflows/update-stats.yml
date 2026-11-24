@@ -1,0 +1,162 @@
+
+name: Update RHOMBUS Club Statistics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */12 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-statistics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get repository files
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Fetch Chess.com club data
+        run: |
+          python - <<'PY'
+          import json
+          import urllib.request
+          from datetime import datetime, timezone
+          from urllib.error import HTTPError, URLError
+
+          BASE = "https://api.chess.com/pub/club/rhombus-club"
+
+          HEADERS = {
+              "User-Agent": (
+                  "RHOMBUS-CLUB-STATS/1.0 "
+                  "(username: ashilanshad-dotcom; "
+                  "contact: https://github.com/ashilanshad-dotcom)"
+              ),
+              "Accept": "application/json"
+          }
+
+          def get_json(url):
+              request = urllib.request.Request(
+                  url,
+                  headers=HEADERS
+              )
+
+              try:
+                  with urllib.request.urlopen(
+                      request, timeout=30
+                  ) as response:
+                      return json.loads(response.read().decode("utf-8"))
+
+              except HTTPError as error:
+                  body = error.read().decode("utf-8", errors="replace")
+                  raise RuntimeError(
+                      f"Chess.com returned HTTP {error.code}: {body}"
+                  ) from error
+
+              except URLError as error:
+                  raise RuntimeError(
+                      f"Could not contact Chess.com: {error}"
+                  ) from error
+
+          print("Fetching club profile...")
+          profile = get_json(BASE)
+
+          print("Fetching club member records...")
+          member_data = get_json(BASE + "/members")
+
+          unique_members = {}
+
+          for category in ("weekly", "monthly", "all_time"):
+              group = member_data.get(category, [])
+
+              for member in group:
+                  username = member.get("username")
+                  joined = member.get("joined")
+
+                  if not username:
+                      continue
+
+                  key = username.lower()
+
+                  if key not in unique_members:
+                      unique_members[key] = {
+                          "username": username,
+                          "joined": joined
+                      }
+
+          members = list(unique_members.values())
+
+          members.sort(
+              key=lambda item: item["joined"] or 0,
+              reverse=True
+          )
+
+          newest_members = []
+
+          for member in members[:20]:
+              timestamp = member["joined"]
+
+              joined_date = None
+              if timestamp:
+                  joined_date = datetime.fromtimestamp(
+                      timestamp,
+                      tz=timezone.utc
+                  ).isoformat()
+
+              newest_members.append({
+                  "username": member["username"],
+                  "joined": timestamp,
+                  "joined_date": joined_date
+              })
+
+          result = {
+              "updated_at": datetime.now(
+                  timezone.utc
+              ).isoformat(),
+
+              "club_name": profile.get(
+                  "name", "RHOMBUS CLUB"
+              ),
+
+              "total_members": profile.get(
+                  "members_count"
+              ),
+
+              "member_records": len(members),
+
+              "newest_members": newest_members,
+
+              "data_note": (
+                  "Member records are returned by Chess.com "
+                  "and grouped by activity. They may not represent "
+                  "the complete club roster."
+              )
+          }
+
+          with open("stats.json", "w", encoding="utf-8") as file:
+              json.dump(result, file, indent=2, ensure_ascii=False)
+
+          print("Statistics successfully saved to stats.json")
+          print("Total club members:", result["total_members"])
+          print("Member records:", result["member_records"])
+          PY
+
+      - name: Save updated statistics
+        run: |
+          git add stats.json
+
+          if git diff --cached --quiet; then
+            echo "No statistics changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            git commit -m "Update RHOMBUS Club statistics"
+            git push
+          fi
