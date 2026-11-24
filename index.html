@@ -110,6 +110,7 @@ button:disabled {
   text-align: center;
   font-size: 12px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .members {
@@ -163,6 +164,7 @@ button:disabled {
   margin-top: 15px;
   text-align: center;
   font-size: 12px;
+  line-height: 2;
 }
 
 .links a {
@@ -255,10 +257,12 @@ button:disabled {
     GitHub Actions is configured to update this information
     twice daily.
 
-    The Refresh Data button reloads the saved information.
-    It does not directly request new information from Chess.com.
+    The Refresh Data button reloads the latest published
+    statistics file. It does not directly contact Chess.com.
 
     Chess.com may cache its API responses for up to 12 hours.
+    Member records may be unavailable if Chess.com rejects
+    the member-list request.
   </div>
 
   <!-- LINKS -->
@@ -317,13 +321,13 @@ async function refreshStats() {
 
   try {
 
-    // Locate the stats.json file alongside this webpage.
+    // Build the stats.json address relative to this webpage.
     const statsURL = new URL(
       "./stats.json",
       window.location.href
     );
 
-    // Add a unique query to request the latest published file.
+    // Request a fresh copy from the published website.
     statsURL.searchParams.set(
       "refresh",
       Date.now().toString()
@@ -331,7 +335,9 @@ async function refreshStats() {
 
     const response = await fetch(
       statsURL.toString(),
-      { cache: "no-store" }
+      {
+        cache: "no-store"
+      }
     );
 
     if (!response.ok) {
@@ -352,13 +358,13 @@ async function refreshStats() {
       );
     }
 
-    // DISPLAY TOTAL MEMBERS
+    // TOTAL MEMBERS
     total.textContent =
       typeof data.total_members === "number"
         ? data.total_members.toLocaleString()
         : "Unavailable";
 
-    // DISPLAY MEMBER RECORDS
+    // MEMBER RECORDS
     if (
       data.members_available === true &&
       typeof data.member_records === "number"
@@ -373,7 +379,7 @@ async function refreshStats() {
 
     }
 
-    // DISPLAY NEWEST MEMBERS
+    // NEWEST MEMBERS
     newest.replaceChildren();
 
     const members =
@@ -454,7 +460,7 @@ async function refreshStats() {
 
     }
 
-    // DISPLAY LAST AUTOMATED UPDATE
+    // LAST AUTOMATED UPDATE
     let updatedText =
       "Update time unavailable";
 
@@ -515,3 +521,4 @@ refreshStats();
 
 </body>
 </html>
+
