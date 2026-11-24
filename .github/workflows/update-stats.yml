@@ -20,15 +20,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Fetch Chess.com club data
         run: |
           python - <<'PY'
           import json
           import urllib.request
-          from datetime import datetime, timezone
           from urllib.error import HTTPError, URLError
+          from datetime import datetime, timezone
 
           BASE = "https://api.chess.com/pub/club/rhombus-club"
 
@@ -51,44 +51,92 @@ jobs:
                   with urllib.request.urlopen(
                       request, timeout=30
                   ) as response:
-                      return json.loads(response.read().decode("utf-8"))
+                      return json.loads(
+                          response.read().decode("utf-8")
+                      )
 
               except HTTPError as error:
-                  body = error.read().decode("utf-8", errors="replace")
+                  body = error.read().decode(
+                      "utf-8", errors="replace"
+                  )
                   raise RuntimeError(
-                      f"Chess.com returned HTTP {error.code}: {body}"
-                  ) from error
+                      f"HTTP {error.code}: {body}"
+                  )
 
               except URLError as error:
                   raise RuntimeError(
-                      f"Could not contact Chess.com: {error}"
-                  ) from error
+                      f"Connection error: {error}"
+                  )
 
           print("Fetching club profile...")
+
           profile = get_json(BASE)
 
+          total_members = profile.get("members_count")
+
+          if total_members is None:
+              raise RuntimeError(
+                  "Club profile did not contain members_count."
+              )
+
+          print("Total members:", total_members)
+
           print("Fetching club member records...")
-          member_data = get_json(BASE + "/members")
+
+          member_data = None
+          member_error = None
+
+          try:
+              member_data = get_json(BASE + "/members")
+
+              if not isinstance(member_data, dict) or not any(
+                  key in member_data
+                  for key in ("weekly", "monthly", "all_time")
+              ):
+                  raise RuntimeError(
+                      "Unexpected response from member endpoint."
+                  )
+
+          except Exception as error:
+              member_error = str(error)
+              member_data = None
+
+              print(
+                  "Member records unavailable:",
+                  member_error
+              )
 
           unique_members = {}
 
-          for category in ("weekly", "monthly", "all_time"):
-              group = member_data.get(category, [])
+          if member_data is not None:
 
-              for member in group:
-                  username = member.get("username")
-                  joined = member.get("joined")
+              for category in (
+                  "weekly",
+                  "monthly",
+                  "all_time"
+              ):
 
-                  if not username:
-                      continue
+                  group = member_data.get(category, [])
 
-                  key = username.lower()
+                  for member in group:
 
-                  if key not in unique_members:
-                      unique_members[key] = {
-                          "username": username,
-                          "joined": joined
-                      }
+                      username = member.get("username")
+                      joined = member.get("joined")
+
+                      if not username:
+                          continue
+
+                      key = username.lower()
+
+                      if (
+                          key not in unique_members
+                          or (joined or 0) >
+                          (unique_members[key]["joined"] or 0)
+                      ):
+                          unique_members[key] = {
+                              "username": username,
+                              "joined": joined
+                          }
 
           members = list(unique_members.values())
 
@@ -100,9 +148,11 @@ jobs:
           newest_members = []
 
           for member in members[:20]:
+
               timestamp = member["joined"]
 
               joined_date = None
+
               if timestamp:
                   joined_date = datetime.fromtimestamp(
                       timestamp,
@@ -116,35 +166,58 @@ jobs:
               })
 
           result = {
-              "updated_at": datetime.now(
-                  timezone.utc
-              ).isoformat(),
-
               "club_name": profile.get(
                   "name", "RHOMBUS CLUB"
               ),
 
-              "total_members": profile.get(
-                  "members_count"
+              "total_members": total_members,
+
+              "member_records": (
+                  len(members)
+                  if member_data is not None
+                  else None
               ),
 
-              "member_records": len(members),
+              "members_available": (
+                  member_data is not None
+              ),
+
+              "members_error": member_error,
 
               "newest_members": newest_members,
 
+              "updated_at": datetime.now(
+                  timezone.utc
+              ).isoformat(),
+
               "data_note": (
-                  "Member records are returned by Chess.com "
-                  "and grouped by activity. They may not represent "
-                  "the complete club roster."
+                  "Member records are grouped by activity "
+                  "and may not represent a complete roster."
               )
           }
 
-          with open("stats.json", "w", encoding="utf-8") as file:
-              json.dump(result, file, indent=2, ensure_ascii=False)
+          with open(
+              "stats.json",
+              "w",
+              encoding="utf-8"
+          ) as file:
+              json.dump(
+                  result,
+                  file,
+                  indent=2,
+                  ensure_ascii=False
+              )
 
-          print("Statistics successfully saved to stats.json")
-          print("Total club members:", result["total_members"])
+          print("Statistics saved to stats.json.")
+          print("Total members:", total_members)
           print("Member records:", result["member_records"])
+
+          if member_error:
+              print(
+                  "NOTE: Member information is unavailable. "
+                  "The profile statistics were saved successfully."
+              )
+
           PY
 
       - name: Save updated statistics
@@ -152,7 +225,7 @@ jobs:
           git add stats.json
 
           if git diff --cached --quiet; then
-            echo "No statistics changes to commit."
+            echo "No statistics changes."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
