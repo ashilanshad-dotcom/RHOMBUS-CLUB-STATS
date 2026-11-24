@@ -1,0 +1,520 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RHOMBUS CLUB | Live Statistics</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px 14px;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  color: #ffffff;
+  background: linear-gradient(145deg, #080609, #260713, #10060b);
+}
+
+.container {
+  max-width: 760px;
+  margin: auto;
+  padding: 20px;
+  border: 2px solid #e8174d;
+  border-radius: 15px;
+  box-shadow: 0 0 22px rgba(232,23,77,.35);
+  background: rgba(15,5,11,.94);
+}
+
+.header {
+  text-align: center;
+  padding: 18px 5px;
+  border-bottom: 1px solid #76203b;
+}
+
+.header h1 {
+  margin: 0;
+  color: #ff315f;
+  font-size: clamp(25px, 6vw, 38px);
+  letter-spacing: 3px;
+  text-shadow: 0 0 15px #e8174d;
+}
+
+.header p {
+  color: #f5a0b4;
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+
+.subtitle {
+  color: #d99aaa;
+  font-size: 12px;
+  text-align: center;
+  margin: 18px 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  padding: 19px 10px;
+  text-align: center;
+  border: 1px solid #76203b;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #260713, #10060b);
+}
+
+.stat-label {
+  color: #f5a0b4;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.stat-number {
+  margin-top: 10px;
+  color: #ffffff;
+  font-size: 34px;
+  font-weight: 900;
+}
+
+button {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #ff6687;
+  border-radius: 8px;
+  background: linear-gradient(100deg, #e8174d, #8f1035);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.status {
+  margin: 13px 0;
+  color: #d99aaa;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.members {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #76203b;
+}
+
+.members h2 {
+  color: #ff6687;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+
+.member {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 5px;
+  border-bottom: 1px solid #3b1424;
+  font-size: 13px;
+}
+
+.member a {
+  color: #f5dce3;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.member a:hover {
+  color: #ff6687;
+}
+
+.member-date {
+  color: #00ffd1;
+  font-size: 12px;
+  text-align: right;
+}
+
+.note {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid #4d1930;
+  border-radius: 8px;
+  color: #d99aaa;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.links {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.links a {
+  color: #ff8ba5;
+  margin: 5px;
+}
+
+.footer {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #76203b;
+  color: #d99aaa;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+@media (max-width: 420px) {
+  .container {
+    padding: 14px;
+  }
+
+  .member {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .member-date {
+    text-align: left;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <header class="header">
+    <h1>RHOMBUS CLUB</h1>
+    <p>THINK • PLAY • SHINE</p>
+    <div>LIVE CLUB STATISTICS</div>
+  </header>
+
+  <div class="subtitle">
+    POWERED BY CHESS.COM PUBLIC DATA API
+  </div>
+
+  <div class="stats">
+
+    <div class="stat-card">
+      <div class="stat-label">TOTAL MEMBERS</div>
+      <div class="stat-number" id="totalMembers">—</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">MEMBER RECORDS</div>
+      <div class="stat-number" id="memberRecords">—</div>
+    </div>
+
+  </div>
+
+  <button id="refreshButton" onclick="refreshStats()">
+    ↻ REFRESH DATA
+  </button>
+
+  <div class="status" id="status" role="status" aria-live="polite">
+    Loading club statistics...
+  </div>
+
+  <section class="members">
+
+    <h2>♦ NEWEST MEMBERS</h2>
+
+    <div id="newestMembers">
+      Retrieving member records...
+    </div>
+
+  </section>
+
+  <div class="note">
+    Information is retrieved from Chess.com's public API.
+    API responses can be cached for up to 12 hours.
+    Refreshing the page does not guarantee that Chess.com
+    has generated a newer response.
+  </div>
+
+  <div class="links">
+    <a href="https://www.chess.com/club/rhombus-club"
+       target="_blank" rel="noopener noreferrer">
+       VISIT RHOMBUS CLUB ↗
+    </a>
+    |
+    <a href="https://api.chess.com/pub/club/rhombus-club"
+       target="_blank" rel="noopener noreferrer">
+       CLUB API ↗
+    </a>
+  </div>
+
+  <footer class="footer">
+    RHOMBUS CLUB<br><br>
+    STRATEGY • HONOR • EXCELLENCE
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+const CLUB_PROFILE =
+  "https://api.chess.com/pub/club/rhombus-club";
+
+const CLUB_MEMBERS =
+  "https://api.chess.com/pub/club/rhombus-club/members";
+
+let callbackCounter = 0;
+
+function jsonpRequest(url) {
+
+  return new Promise((resolve, reject) => {
+
+    callbackCounter++;
+
+    const callbackName =
+      "rhombusCallback" + callbackCounter;
+
+    const script = document.createElement("script");
+
+    let completed = false;
+
+    const timeout = setTimeout(() => {
+      finish(new Error("The API request timed out."));
+    }, 15000);
+
+    function finish(error, data) {
+
+      if (completed) return;
+
+      completed = true;
+
+      clearTimeout(timeout);
+      script.remove();
+
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve(data);
+      }
+    }
+
+    window[callbackName] = function(data) {
+      finish(null, data);
+    };
+
+    script.onerror = function() {
+      finish(new Error("Could not connect to Chess.com."));
+    };
+
+    const separator = url.includes("?") ? "&" : "?";
+
+    script.src =
+      url + separator +
+      "callback=" + encodeURIComponent(callbackName);
+
+    document.head.appendChild(script);
+
+  });
+}
+
+function displayNewestMembers(data) {
+
+  const categories = [
+    "weekly",
+    "monthly",
+    "all_time"
+  ];
+
+  const uniqueMembers = new Map();
+
+  categories.forEach(category => {
+
+    const list = Array.isArray(data[category])
+      ? data[category]
+      : [];
+
+    list.forEach(member => {
+
+      if (!member || !member.username) return;
+
+      const key = member.username.toLowerCase();
+
+      if (!uniqueMembers.has(key)) {
+        uniqueMembers.set(key, member);
+      }
+
+    });
+
+  });
+
+  const records = Array.from(uniqueMembers.values());
+
+  records.sort((a, b) =>
+    Number(b.joined || 0) - Number(a.joined || 0)
+  );
+
+  document.getElementById("memberRecords").textContent =
+    records.length.toLocaleString();
+
+  const output =
+    document.getElementById("newestMembers");
+
+  output.replaceChildren();
+
+  if (records.length === 0) {
+    output.textContent =
+      "No member records were returned.";
+    return;
+  }
+
+  records.slice(0, 10).forEach((member, index) => {
+
+    const row = document.createElement("div");
+    row.className = "member";
+
+    const name = document.createElement("a");
+
+    name.textContent =
+      String(index + 1).padStart(2, "0") +
+      ". @" + member.username;
+
+    name.href =
+      "https://www.chess.com/member/" +
+      encodeURIComponent(member.username);
+
+    name.target = "_blank";
+    name.rel = "noopener noreferrer";
+
+    const date = document.createElement("span");
+    date.className = "member-date";
+
+    const timestamp = Number(member.joined);
+
+    date.textContent = timestamp
+      ? new Date(timestamp * 1000).toLocaleDateString(
+          undefined,
+          {
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+          }
+        )
+      : "Date unavailable";
+
+    row.append(name, date);
+    output.appendChild(row);
+
+  });
+
+}
+
+async function refreshStats() {
+
+  const button =
+    document.getElementById("refreshButton");
+
+  const status =
+    document.getElementById("status");
+
+  const total =
+    document.getElementById("totalMembers");
+
+  button.disabled = true;
+  button.textContent = "LOADING...";
+
+  status.textContent =
+    "Connecting to Chess.com...";
+
+  let profileLoaded = false;
+  let membersLoaded = false;
+
+  try {
+
+    const profile = await jsonpRequest(CLUB_PROFILE);
+
+    if (typeof profile.members_count === "number") {
+
+      total.textContent =
+        profile.members_count.toLocaleString();
+
+      profileLoaded = true;
+
+    } else {
+
+      total.textContent = "Unavailable";
+
+    }
+
+  } catch (error) {
+
+    total.textContent = "Unavailable";
+
+    status.textContent =
+      "Club information could not be loaded. Checking member data...";
+
+  }
+
+  try {
+
+    const memberData = await jsonpRequest(CLUB_MEMBERS);
+
+    displayNewestMembers(memberData || {});
+
+    membersLoaded = true;
+
+  } catch (error) {
+
+    document.getElementById("newestMembers").textContent =
+      "Member data could not be loaded. Please try again later.";
+
+  }
+
+  if (profileLoaded && membersLoaded) {
+
+    status.textContent =
+      "Successfully checked at " +
+      new Date().toLocaleTimeString() +
+      ". Chess.com may return cached data.";
+
+  } else if (profileLoaded || membersLoaded) {
+
+    status.textContent =
+      "Partially loaded. Some API information was unavailable.";
+
+  } else {
+
+    status.textContent =
+      "Unable to retrieve statistics. Check your connection and try again.";
+
+  }
+
+  button.disabled = false;
+  button.textContent = "↻ REFRESH DATA";
+
+}
+
+refreshStats();
+</script>
+
+</body>
+</html>
