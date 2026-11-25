@@ -237,32 +237,8 @@ button:disabled {
     Loading saved statistics...
   </div>
 
-  <!-- NEWEST MEMBERS -->
-  <section class="members">
-
-    <h2>♦ NEWEST MEMBERS</h2>
-
-    <div id="newestMembers">
-      Retrieving member records...
-    </div>
-
+  
   </section>
-
-  <!-- INFORMATION -->
-  <div class="note">
-    Statistics are loaded from the automatically generated
-    stats.json file in the RHOMBUS CLUB GitHub repository.
-
-    GitHub Actions is configured to update this information
-    twice daily.
-
-    The Refresh Data button reloads the latest published
-    statistics file. It does not directly contact Chess.com.
-
-    Chess.com may cache its API responses for up to 12 hours.
-    Member records may be unavailable if Chess.com rejects
-    the member-list request.
-  </div>
 
   <!-- LINKS -->
   <div class="links">
@@ -355,12 +331,7 @@ async function refreshStats() {
         ? data.total_members.toLocaleString()
         : "Unavailable";
 
-    // MEMBER RECORDS
-    if (
-      data.members_available === true &&
-      typeof data.member_records === "number"
-    ) {
-
+   
       records.textContent =
         data.member_records.toLocaleString();
 
