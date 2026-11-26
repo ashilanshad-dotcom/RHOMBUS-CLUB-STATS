@@ -1,10 +1,10 @@
 {
   "club_name": "RHOMBUS CLUB",
-  "total_members": 273,
+  "total_members": 274,
   "member_records": null,
   "members_available": false,
   "members_error": "HTTP 404: {\"code\":403,\"message\":\"An internal error has occurred. Please contact Chess.com Developer's Forum for further help https://www.chess.com/club/chess-com-developer-community .\"}",
   "newest_members": [],
-  "updated_at": "2026-11-25T13:33:53.813594+00:00",
+  "updated_at": "2026-11-26T01:28:08.337337+00:00",
   "data_note": "Member records are grouped by activity and may not represent a complete roster."
 }
